@@ -1,0 +1,179 @@
+<!-- Css added and useEffect() and useRef() used-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chatbot</title>
+    <link rel= "stylesheet" href="../chatbot/chatbot_css/chatbot-css.css">
+  </head>
+  <body>
+    <div class="js-container"></div>
+
+    <script src="./react-basics.js"></script>
+    
+    <script src="https://unpkg.com/supersimpledev/react.js"></script>
+    <script src="https://unpkg.com/supersimpledev/react-dom.js"></script>
+<!-- --------------------------------------------------------------------------------------- -->
+<!-- used the below external lib for gettig response from cahtbot.  -->
+    <script src="https://unpkg.com/supersimpledev/chatbot.js"></script>
+<!-- --------------------------------------------------------------------------------------- -->
+
+    <script src="https://unpkg.com/supersimpledev/babel.js"></script>
+    <script type="text/babel">
+//------------------------------------------------------------------------------------------
+    // added onChange. it runs a function when we change the text inside an <input>.
+    // when onChange runs the function given inside it. it will give a parameter(event) to that function. event is an object and it contains details about the change.
+    // so here one of the detail is event.target which gives us the element that we are typing in or that we changed.
+    // here as we are changing/adding new text to the <input> element. event.target will give use the <input> element.
+    
+    function ChatInput(props){
+        const[inputText,setInputText]=React.useState('');
+        // here everytime we change the value inside the <input> it will give that value to the updater function which then will update the inputText(Current Data) which we can use to display on the web page.
+        function saveInputText(event){
+            setInputText(event.target.value);
+        }
+
+        function sendMessage(){
+            // here we saved the data till the user gives an input in a variable. so that we can add the response of the bot after updating the HTML with user input. otherwise it will directly update the HTML by the response and will not include the user input as state only update the data after the whole code is finished.
+            const newMessages= [
+                ...props.currentData, //(...)This is known as spread operator:- it takes values from an array, and copies then into a new array
+                {
+                    message: inputText,
+                    sender:'user',
+                    id: crypto.randomUUID()
+                }
+                ];
+            props.setCurrentData(newMessages);
+            // using this to empty the <input> so we can type new message in it.
+            setInputText(''); //will update the value inside inputText to ''. but will not change that on HTML. so we will update that by adding 'value={inputText}' in the html.
+//----------------------------------------------------------------------------------------------------------------------------------------------------------        
+        //Creating response of the bot using the ecternal lib.
+        // here Chatbot is an object in the external lib. and it has a method '.getresponse(user Input)' which take the user input as a parametere an respond to it.
+           const response= Chatbot.getResponse(inputText);    
+           // again using the updater function to update the curretData with the response given by the bot. which will also update the HTML on the webpage. as when ever the updaterfunction runs it runs the whole HTML again.
+           props.setCurrentData([
+               // here as we stored the previous array which contains the data till user input in the newMessage variable. so we are now copying it and adding the response from the bot to it.  
+                ...newMessages, 
+                {
+                    message: response,
+                    sender:'bot',
+                    id: crypto.randomUUID()
+                }
+                ]);
+//----------------------------------------------------------------------------------------------------------------------------------------------------------        
+        }
+
+        return (
+            <>
+                <div className="chat">
+                    <input 
+                    className= "message-box"
+                    placeholder="Type your query..." 
+                    onChange={saveInputText} 
+                    value={inputText}  // value let's us change the text inside this <input>. and as we already updated the inputText above to '' . so it will update the HTML inside <input> by '' this empty string.
+                    />
+                    <button className="send-button" onClick={sendMessage}>Send</button>
+                </div>
+            </>
+        );
+    }
+//------------------------------------------------------------------------------------------
+
+        function ChatMessage(props){
+            const { message,sender } = props; 
+            return(
+                // here we just used ternary operator to decide wether the sender is 'user' or 'bot' and then assign the class name so we can use it for styling.
+                <div className={sender==="user" ? 'user-chat':'bot-chat'}>
+                    {sender==="bot" && <img className="sender-img" src="bot.png"/>}
+                    <div className="chat-message-text">
+                        {message}
+                    </div>
+                    {sender==="user" && <img className="sender-img" src="user.png"/>}
+                </div>
+            );    
+        }   
+
+    function Message(props){
+//----------------------------------------------------------------------------------------------------------------------------------
+    // useRef():- lets use automatically save an HTML element from the component    
+    // 1st parameter is the initial value stored in the ref. here ref will conatin the HTML element with class name "chat-message" as we have passed there ref={refer}.
+        const refer= React.useRef(null)
+
+    // Hooks. useEffect() used. It run's the given functionafter any component is created or updated. for ex:- when we type a message to the bot the chat message component gets updated hence the function inside useEffect will run.
+    // the second parameter controls when useEffect runs. [](empty array) only run once,after the component is created.  
+    // here we added a value in array which is the currentData. so when ever current data will get updated the function will run.
+        React.useEffect(()=>{
+            const refElement= refer.current;
+            if(refElement){
+                refElement.scrollTop=refElement.scrollHeight;
+            }
+        },[props.currentData]);
+//----------------------------------------------------------------------------------------------------------------------------------
+            return(
+                //Here the parameter(chatMessage) will contain all the key value pairs from the array(Messages).
+                // learn about map from 'What is map.txt' file.:- for brief it's like a loop.
+                //Here current data is getting updated everytime. and each time the HTML is running againad updating on the website. 
+                <>
+                    <div className="chat-message" ref= {refer}>    
+                        {props.currentData.map((chatMessage) => {
+                            return(
+                                <ChatMessage
+                                // as ChatMessage needs 2 props we add message and sender props.
+                                // but key is only added here beacause of 'map'. as Each element rendered with map() must have a unique key prop to help React track changes in the array.
+                                    message={chatMessage.message} 
+                                    sender={chatMessage.sender}
+                                    key={chatMessage.id}
+                                />
+                                );
+                        })}
+                    </div>    
+                </>
+            )
+    }
+
+    function App(){
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // instead of doing below code we did the shortcut. and directly used array destructring above, it does the same work.
+    // useState returns an array with 2 values. as explained below.   
+        //const currentData = arr[0]; // gives the current data from the array. and it is the first value of useState.(useState has 2 values.arr[0] and arr[1]);
+        // const setCurrentData=arr[1]; // it is the function which will update the data. It is the second value of usestate.
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        const [currentData,setCurrentData]=React.useState([{ // here we used array destructring which is the short cut for the below code. it assign currentData= arr[0] and setCurrentData= arr[1];
+                message:'Hello bot',
+                sender: "user",
+                id: 'id1'
+            },{
+                message:"Hi how may I help you today?",
+                sender: "bot",
+                id: 'id2'
+            },{
+                message:"Flip a coin",
+                sender:"user",
+                id: 'id3'
+            },{
+                message:"Sure! it's tails.",
+                sender:"bot",
+                id: 'id4'
+            }]);
+
+        return(
+            // here <Messages/> contains all the <ChatMessage message={...} sender={...} key={...}/> which was created using .map().
+            <>
+                <div className="app-container">
+                    <Message
+                    currentData={currentData}
+                    /> 
+                    <ChatInput
+                    currentData={currentData}
+                    setCurrentData={setCurrentData}
+                    />
+                </div>
+            </>
+        );
+    }
+//--------------------------------------------------------------------------------------------------------------------------------------
+      const container = document.querySelector('.js-container');
+      ReactDOM.createRoot(container).render(<App/>); // Catching the main APP component
+    </script>
+  </body>
+</html>
